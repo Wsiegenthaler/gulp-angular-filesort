@@ -37,9 +37,6 @@ module.exports = function angularFilesort () {
           if (isDependecyUsedInAnyDeclaration(dep, deps)) {
             return;
           }
-          if (dep === ANGULAR_MODULE) {
-            return;
-          }
           toSort.push([file, dep]);
         });
       }
@@ -79,7 +76,5 @@ function isDependecyUsedInAnyDeclaration (dependency, ngDeps) {
   if (dependency in ngDeps.modules) {
     return true;
   }
-  return Object.keys(ngDeps.modules).some(function (module) {
-    return ngDeps.modules[module].indexOf(dependency) > -1;
-  });
+  return false;
 }
