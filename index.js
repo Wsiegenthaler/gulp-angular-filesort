@@ -13,44 +13,43 @@ module.exports = function angularFilesort () {
   var toSort = [];
 
   return es.through(function collectFilesToSort (file) {
-      if(!file.contents) {
-        return this.emit('error', new PluginError(PLUGIN_NAME, 'File: "' + file.relative + '" without content. You have to read it with gulp.src(..)'));
+      if(file.contents) {
+
+        var deps;
+
+	      // prevent read errors for non-js files
+	      if (!file.relative.match(/.+\.js$/)) {
+		      // still need to add the file though
+		      files.push(file);
+		      return;
+	      }
+
+        try {
+          deps = ngDep(file.contents);
+        } catch (err) {
+          return this.emit('error', new PluginError(PLUGIN_NAME, 'Error in parsing: "' + file.relative + '", ' + err.message));
+        }
+
+        if (deps.modules) {
+          // Store references to each file with a declaration:
+          Object.keys(deps.modules).forEach(function (name) {
+            angmods[name] = file;
+          });
+        }
+
+        if (deps.dependencies) {
+          // Add each file with dependencies to the array to sort:
+          deps.dependencies.forEach(function (dep) {
+            if (isDependecyUsedInAnyDeclaration(dep, deps)) {
+              return;
+            }
+            toSort.push([file, dep]);
+          });
+        }
+
+        // Collect all files:
+        files.push(file);
       }
-
-      var deps;
-
-	  // prevent read errors for non-js files
-	  if (!file.relative.match(/.+\.js$/)) {
-		  // still need to add the file though
-		  files.push(file);
-		  return;
-	  }
-
-      try {
-        deps = ngDep(file.contents);
-      } catch (err) {
-        return this.emit('error', new PluginError(PLUGIN_NAME, 'Error in parsing: "' + file.relative + '", ' + err.message));
-      }
-
-      if (deps.modules) {
-        // Store references to each file with a declaration:
-        Object.keys(deps.modules).forEach(function (name) {
-          angmods[name] = file;
-        });
-      }
-
-      if (deps.dependencies) {
-        // Add each file with dependencies to the array to sort:
-        deps.dependencies.forEach(function (dep) {
-          if (isDependecyUsedInAnyDeclaration(dep, deps)) {
-            return;
-          }
-          toSort.push([file, dep]);
-        });
-      }
-
-      // Collect all files:
-      files.push(file);
 
     }, function afterFileCollection () {
       // Convert all module names to actual files with declarations:
